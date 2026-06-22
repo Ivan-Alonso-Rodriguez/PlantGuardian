@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "PlantGuardian IoT",
+    "slug": "plantguardian-iot",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "plantguardian",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B3D2E"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

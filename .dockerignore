@@ -1,0 +1,12 @@
+.git
+.agents
+.codex_deps
+.env
+.env.*
+!.env.example
+__pycache__
+.pytest_cache
+.venv
+venv
+node_modules
+.expo

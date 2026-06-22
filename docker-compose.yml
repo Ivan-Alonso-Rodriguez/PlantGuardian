@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: plantguardian-postgres
+    environment:
+      POSTGRES_DB: plantguardian
+      POSTGRES_USER: plantguardian
+      POSTGRES_PASSWORD: plantguardian
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plantguardian -d plantguardian"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: plantguardian-mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: plantguardian-backend
+    environment:
+      PLANTGUARDIAN_USE_DATABASE: "true"
+      DATABASE_URL: postgresql+psycopg://plantguardian:plantguardian@postgres:5432/plantguardian
+      PLANTGUARDIAN_MQTT_ENABLED: "true"
+      PLANTGUARDIAN_MQTT_INGEST_ENABLED: "true"
+      MQTT_HOST: mosquitto
+      MQTT_PORT: "1883"
+      MQTT_CLIENT_ID: plantguardian-backend
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+
+volumes:
+  postgres-data:
+  mosquitto-data:
+  mosquitto-log:
