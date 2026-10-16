@@ -23,7 +23,11 @@ class SqlReadingRepository:
 
     def latest(self) -> StoredReading | None:
         with self._session_factory() as session:
-            statement = select(SensorReading).order_by(desc(SensorReading.created_at)).limit(1)
+            statement = (
+                select(SensorReading)
+                .order_by(desc(SensorReading.created_at), desc(SensorReading.id))
+                .limit(1)
+            )
             model = session.scalar(statement)
             if model is None:
                 return None
@@ -33,7 +37,7 @@ class SqlReadingRepository:
         with self._session_factory() as session:
             statement = (
                 select(SensorReading)
-                .order_by(desc(SensorReading.created_at))
+                .order_by(desc(SensorReading.created_at), desc(SensorReading.id))
                 .limit(limit)
             )
             return [self._to_stored(model) for model in session.scalars(statement).all()]

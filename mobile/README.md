@@ -14,13 +14,11 @@ Expo React Native app for PlantGuardian IoT.
 
 ## Backend Connection
 
-The default API URL is:
+Expo Go derives the default backend URL from the Metro host, using port `8000`.
+For example, a device that opens `exp://192.168.1.25:8081` will call
+`http://192.168.1.25:8000`.
 
-```text
-http://127.0.0.1:8000
-```
-
-Change it from the Settings tab when testing on a real device. A physical phone usually needs the computer LAN IP instead of `127.0.0.1`.
+You can still override the API URL from the Settings tab when needed.
 
 ## Run
 

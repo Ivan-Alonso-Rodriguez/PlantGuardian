@@ -1,5 +1,7 @@
 import { create } from "zustand";
 
+import { getDefaultApiBaseUrl } from "../utils/network";
+
 type ThemeMode = "light" | "dark";
 
 type SettingsState = {
@@ -10,7 +12,7 @@ type SettingsState = {
 };
 
 export const useSettingsStore = create<SettingsState>((set) => ({
-  apiBaseUrl: "http://127.0.0.1:8000",
+  apiBaseUrl: getDefaultApiBaseUrl(),
   themeMode: "dark",
   setApiBaseUrl: (apiBaseUrl) => set({ apiBaseUrl }),
   toggleTheme: () =>

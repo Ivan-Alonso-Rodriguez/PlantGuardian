@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { CircleStop, Droplet, Power, ShieldCheck } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 
 import { ControlButton } from "../components/ControlButton";
+import { IrrigationStatusCard } from "../components/IrrigationStatusCard";
 import { Screen } from "../components/Screen";
 import { createApiClient } from "../services/apiClient";
+import { connectRealtime } from "../services/realtimeClient";
 import { useSettingsStore } from "../store/settingsStore";
 import { useTheme } from "../theme/useTheme";
+import { SensorReading } from "../types/api";
 
 const commands = [
   { label: "Activar automatico", path: "/api/control/auto-on", icon: ShieldCheck, variant: "primary" as const },
@@ -20,15 +24,45 @@ export function ControlScreen() {
   const theme = useTheme();
   const apiBaseUrl = useSettingsStore((state) => state.apiBaseUrl);
   const api = useMemo(() => createApiClient(apiBaseUrl), [apiBaseUrl]);
+  const isFocused = useIsFocused();
   const [busyPath, setBusyPath] = useState<string | null>(null);
   const [lastCommand, setLastCommand] = useState("Sin comandos enviados");
+  const [latestReading, setLatestReading] = useState<SensorReading | null>(null);
   const styles = makeStyles(theme);
+
+  const refresh = useCallback(async () => {
+    try {
+      const dashboard = await api.getDashboard();
+      setLatestReading(dashboard.latest_reading);
+    } catch {
+      setLatestReading(null);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!isFocused) {
+      return;
+    }
+
+    return connectRealtime(apiBaseUrl, () => refresh());
+  }, [apiBaseUrl, isFocused, refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   async function send(path: string) {
     setBusyPath(path);
     try {
       const response = await api.sendCommand(path);
       setLastCommand(`${response.command} publicado`);
+      await refresh();
     } catch {
       setLastCommand("No se pudo publicar el comando");
     } finally {
@@ -42,6 +76,8 @@ export function ControlScreen() {
         <Text style={styles.title}>Control remoto</Text>
         <Text style={styles.subtitle}>{lastCommand}</Text>
       </View>
+
+      <IrrigationStatusCard reading={latestReading} />
 
       <View style={styles.actions}>
         {commands.map((command) => (

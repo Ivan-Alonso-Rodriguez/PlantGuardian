@@ -1,6 +1,6 @@
 # PlantGuardian IoT
 
-PlantGuardian IoT is a smart irrigation and environmental monitoring system for plants. It connects Arduino Mega, ESP32, MQTT, FastAPI, PostgreSQL, and a future React Native mobile app into a portfolio-ready IoT product.
+PlantGuardian IoT is a smart irrigation and environmental monitoring system for plants. It connects Arduino Mega, ESP32, MQTT, FastAPI, SQL persistence, and an Expo React Native app into a portfolio-ready IoT product.
 
 The MVP is based on real sensor data. It does not implement camera upload, Computer Vision, Grad-CAM, CNN models, or image-based diagnosis.
 
@@ -11,7 +11,7 @@ Small irrigation projects often stop at isolated Arduino sketches. PlantGuardian
 - Sensor readings from Arduino Mega.
 - ESP32 WiFi and MQTT bridge.
 - Backend validation, persistence, scoring, alerts, recommendations, and control commands.
-- Realtime WebSocket stream for a mobile dashboard.
+- Realtime WebSocket stream for a mobile dashboard, sensor history, and control UI.
 - Docker-ready PostgreSQL and Mosquitto infrastructure.
 
 ## Current Status
@@ -29,6 +29,7 @@ Implemented:
 - MQTT command publisher.
 - MQTT sensor reading subscriber.
 - WebSocket endpoint at `/ws/realtime`.
+- Expo React Native app with dashboard, sensors, history, settings, and controls.
 - Docker Compose for backend, PostgreSQL, and Mosquitto.
 - Backend unit tests.
 
@@ -38,8 +39,6 @@ Planned next:
 - Alert persistence.
 - Irrigation event persistence.
 - Alembic migrations.
-- React Native Expo mobile app foundation.
-- Charts, history, settings, and controls UI.
 
 ## Architecture
 
@@ -90,13 +89,28 @@ Services:
 
 ## Mobile Quick Start
 
+On Windows, double-click:
+
+```text
+INICIAR_PLANTGUARDIAN.cmd
+```
+
+The launcher detects the current LAN IP, starts or reuses Mosquitto, FastAPI,
+and Expo Go, enables SQLite history, prewarms the Android bundle, and prints
+the Expo Go URL and QR code. Run it again after changing WiFi networks.
+
+Manual start:
+
 ```bash
 cd mobile
 pnpm install
 pnpm web
 ```
 
-Expo Web runs at `http://localhost:8081` by default. The app points to `http://127.0.0.1:8000` for the backend.
+Expo Web runs at `http://localhost:8081` by default. In Expo Go, the app derives
+the backend address from the Metro host, so it does not depend on a hardcoded
+LAN IP.
+
 ## Firmware
 
 Firmware lives in:
@@ -104,7 +118,10 @@ Firmware lives in:
 - `firmware/arduino-mega/PlantGuardianMega`
 - `firmware/esp32/PlantGuardianESP32`
 
-Copy `firmware/esp32/PlantGuardianESP32/config.example.h` to `config.h` and replace WiFi/MQTT values before uploading to the ESP32.
+Copy `firmware/esp32/PlantGuardianESP32/config.example.h` as `config.h` and
+set your WiFi values there before uploading the ESP32 firmware. `config.h` is
+ignored by Git. The ESP32 can use either configured network, remembers the last
+MQTT broker, and scans the local subnet when the broker IP changes.
 
 ## Documentation
 

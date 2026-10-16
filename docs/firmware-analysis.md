@@ -70,7 +70,7 @@ The ESP32 publishes connection, subscription, rejected command, forwarded comman
 
 ### Improvements Applied
 
-- Added `config.example.h` and ignored local `config.h`.
+- Added `config.example.h` and ignored local `config.h` for WiFi and MQTT credentials.
 - Added MQTT command subscription on `iot/riego/comandos`.
 - Added validation for allowed commands.
 - Added support for plain text commands and JSON command payloads.

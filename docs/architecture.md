@@ -64,7 +64,7 @@ Responsibilities:
 
 Responsibilities:
 
-- Connect to WiFi using local `config.h` generated from `config.example.h`.
+- Connect to WiFi using local `config.h` copied from `config.example.h`.
 - Connect to MQTT broker.
 - Publish readings to `iot/riego/datos`.
 - Publish status and command acknowledgements to `iot/riego/estado`.

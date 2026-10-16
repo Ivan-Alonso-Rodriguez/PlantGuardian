@@ -1,5 +1,7 @@
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <PubSubClient.h>
+#include <Preferences.h>
 
 #if __has_include("config.h")
   #include "config.h"
@@ -33,9 +35,14 @@ const int LED_WIFI = 4;
 // =====================================================
 
 WiFiClient espClient;
+WiFiMulti wifiMulti;
 PubSubClient client(espClient);
+Preferences preferences;
 
 String latestData = "";
+IPAddress mqttBrokerIp;
+bool wifiNetworksConfigured = false;
+int mqttConnectionFailures = 0;
 
 // =====================================================
 // HELPERS
@@ -45,6 +52,71 @@ String makeClientId() {
   String clientId = MQTT_CLIENT_ID_PREFIX;
   clientId += String(random(0xffff), HEX);
   return clientId;
+}
+
+bool probeMqttBroker(const IPAddress& address) {
+  WiFiClient probe;
+  bool reachable = probe.connect(address, MQTT_PORT, MQTT_SCAN_TIMEOUT_MS);
+  probe.stop();
+  return reachable;
+}
+
+bool useMqttBroker(const IPAddress& address) {
+  if (!probeMqttBroker(address)) {
+    return false;
+  }
+
+  mqttBrokerIp = address;
+  client.setServer(mqttBrokerIp, MQTT_PORT);
+  preferences.putString("mqtt_host", mqttBrokerIp.toString());
+
+  Serial.print("MQTT broker found at ");
+  Serial.println(mqttBrokerIp);
+  return true;
+}
+
+bool discoverMqttBroker() {
+  IPAddress candidate;
+  String savedBroker = preferences.getString("mqtt_host", "");
+
+  if (savedBroker.length() > 0 &&
+      candidate.fromString(savedBroker) &&
+      useMqttBroker(candidate)) {
+    return true;
+  }
+
+  if (candidate.fromString(MQTT_SERVER) && useMqttBroker(candidate)) {
+    return true;
+  }
+
+  IPAddress localIp = WiFi.localIP();
+  Serial.print("Scanning local network for MQTT broker from ");
+  Serial.println(localIp);
+
+  for (int host = 1; host <= 254; host++) {
+    candidate = IPAddress(localIp[0], localIp[1], localIp[2], host);
+
+    if (candidate == localIp) {
+      continue;
+    }
+
+    if (useMqttBroker(candidate)) {
+      return true;
+    }
+  }
+
+  Serial.println("MQTT broker was not found on the local network.");
+  return false;
+}
+
+void configureMqttServer() {
+  if (discoverMqttBroker()) {
+    return;
+  }
+
+  client.setServer(MQTT_SERVER, MQTT_PORT);
+  Serial.print("Using fallback MQTT broker: ");
+  Serial.println(MQTT_SERVER);
 }
 
 void publishStatus(const String& status, bool retained = false) {
@@ -123,13 +195,21 @@ void setupWifi() {
   delay(10);
 
   Serial.println();
-  Serial.print("Connecting to WiFi: ");
-  Serial.println(WIFI_SSID);
+  Serial.println("Connecting to a configured WiFi network...");
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  while (WiFi.status() != WL_CONNECTED) {
+  if (!wifiNetworksConfigured) {
+    wifiMulti.addAP(WIFI_SSID, WIFI_PASSWORD);
+
+    if (strlen(WIFI_FALLBACK_SSID) > 0) {
+      wifiMulti.addAP(WIFI_FALLBACK_SSID, WIFI_FALLBACK_PASSWORD);
+    }
+
+    wifiNetworksConfigured = true;
+  }
+
+  while (wifiMulti.run() != WL_CONNECTED) {
     digitalWrite(LED_WIFI, LOW);
     delay(300);
     digitalWrite(LED_WIFI, HIGH);
@@ -141,6 +221,8 @@ void setupWifi() {
 
   Serial.println();
   Serial.println("WiFi connected.");
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
   Serial.print("ESP32 IP: ");
   Serial.println(WiFi.localIP());
 }
@@ -211,17 +293,25 @@ void reconnectMqtt() {
     if (connected) {
       Serial.println("connected.");
       digitalWrite(LED_WIFI, HIGH);
+      mqttConnectionFailures = 0;
 
       client.subscribe(TOPIC_COMANDOS, 1);
       publishStatus("{\"device\":\"esp32\",\"status\":\"online\"}", true);
       publishStatus("{\"device\":\"esp32\",\"event\":\"subscribed\",\"topic\":\"iot/riego/comandos\"}");
     } else {
+      mqttConnectionFailures++;
       Serial.print("failed, rc=");
       Serial.print(client.state());
-      Serial.println(" | retrying in 5 seconds");
+      Serial.println(" | retrying");
 
       digitalWrite(LED_WIFI, LOW);
-      delay(5000);
+
+      if (mqttConnectionFailures >= 2) {
+        mqttConnectionFailures = 0;
+        discoverMqttBroker();
+      }
+
+      delay(2000);
     }
   }
 }
@@ -285,7 +375,8 @@ void setup() {
 
   setupWifi();
 
-  client.setServer(MQTT_SERVER, MQTT_PORT);
+  preferences.begin("plantguardian", false);
+  configureMqttServer();
   client.setCallback(mqttCallback);
   client.setBufferSize(512);
 
@@ -300,6 +391,7 @@ void loop() {
   if (WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_WIFI, LOW);
     setupWifi();
+    configureMqttServer();
   }
 
   if (!client.connected()) {

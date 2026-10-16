@@ -53,24 +53,31 @@ It also accepts structured JSON:
 
 ## ESP32 Configuration
 
-Copy:
+Copy the example firmware configuration:
 
 ```text
 firmware/esp32/PlantGuardianESP32/config.example.h
 ```
 
-to:
+as:
 
 ```text
 firmware/esp32/PlantGuardianESP32/config.h
 ```
 
-Then replace the WiFi and MQTT values. `config.h` is ignored by Git so real credentials are not committed.
+Then set your WiFi and fallback MQTT values in `config.h`. This file is ignored
+by Git and should not be committed with real credentials.
+
+The ESP32 tries either configured WiFi network. After connecting, it tests the
+last broker that worked, then the fallback address, and finally scans the local
+`/24` subnet for an MQTT listener on port `1883`. Upload this firmware once
+after changing the network list; ordinary DHCP address changes do not require
+another upload.
 
 ## Smoke Test
 
 1. Upload `PlantGuardianMega.ino` to Arduino Mega.
-2. Upload `PlantGuardianESP32.ino` to ESP32 after creating `config.h`.
+2. Upload `PlantGuardianESP32.ino` to ESP32 after configuring `config.h`.
 3. Start Mosquitto.
 4. Subscribe to data:
 

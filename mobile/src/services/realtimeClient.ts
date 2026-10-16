@@ -9,18 +9,40 @@ export function connectRealtime(
   onMessage: (message: Partial<DashboardResponse>) => void,
   onStateChange?: (connected: boolean) => void
 ) {
-  const socket = new WebSocket(createRealtimeUrl(apiBaseUrl));
+  let socket: WebSocket | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let closedByCaller = false;
 
-  socket.onopen = () => onStateChange?.(true);
-  socket.onclose = () => onStateChange?.(false);
-  socket.onerror = () => onStateChange?.(false);
-  socket.onmessage = (event) => {
-    try {
-      onMessage(JSON.parse(event.data));
-    } catch {
+  const connect = () => {
+    socket = new WebSocket(createRealtimeUrl(apiBaseUrl));
+
+    socket.onopen = () => onStateChange?.(true);
+    socket.onclose = () => {
       onStateChange?.(false);
-    }
+      if (!closedByCaller) {
+        reconnectTimer = setTimeout(connect, 2000);
+      }
+    };
+    socket.onerror = () => {
+      onStateChange?.(false);
+      socket?.close();
+    };
+    socket.onmessage = (event) => {
+      try {
+        onMessage(JSON.parse(event.data));
+      } catch {
+        onStateChange?.(false);
+      }
+    };
   };
 
-  return () => socket.close();
+  connect();
+
+  return () => {
+    closedByCaller = true;
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+    }
+    socket?.close();
+  };
 }

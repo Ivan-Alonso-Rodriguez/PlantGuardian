@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { Droplets, Gauge, Sun, Thermometer, Waves } from "lucide-react-native";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { AlertCard } from "../components/AlertCard";
 import { DashboardHeader } from "../components/DashboardHeader";
+import { IrrigationStatusCard } from "../components/IrrigationStatusCard";
 import { PlantStatusCard } from "../components/PlantStatusCard";
 import { Screen } from "../components/Screen";
 import { SensorCard } from "../components/SensorCard";
@@ -26,39 +28,55 @@ export function DashboardScreen() {
   const theme = useTheme();
   const apiBaseUrl = useSettingsStore((state) => state.apiBaseUrl);
   const api = useMemo(() => createApiClient(apiBaseUrl), [apiBaseUrl]);
+  const isFocused = useIsFocused();
   const [dashboard, setDashboard] = useState<DashboardResponse>(emptyDashboard);
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
   const styles = makeStyles(theme);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const refresh = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       setDashboard(await api.getDashboard());
     } catch {
-      setDashboard(emptyDashboard);
+      // Keep the last reading visible during transient network hiccups.
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   }, [api]);
 
   useEffect(() => {
-    refresh();
+    refresh(true);
   }, [refresh]);
 
   useEffect(() => {
+    if (!isFocused) {
+      setConnected(false);
+      return;
+    }
+
     return connectRealtime(
       apiBaseUrl,
       () => refresh(),
       setConnected
     );
-  }, [apiBaseUrl, refresh]);
+  }, [apiBaseUrl, isFocused, refresh]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   const reading = dashboard.latest_reading;
 
   return (
     <Screen>
-      <DashboardHeader status={dashboard.status} connected={connected} onRefresh={refresh} />
+      <DashboardHeader status={dashboard.status} connected={connected} onRefresh={() => refresh(true)} />
 
       {loading ? (
         <View style={styles.loading}>
@@ -76,6 +94,8 @@ export function DashboardScreen() {
 
       {reading ? (
         <>
+          <IrrigationStatusCard reading={reading} />
+
           <View style={styles.plants}>
             <PlantStatusCard
               name="Planta 1"

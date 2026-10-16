@@ -6,18 +6,22 @@
 # Firmware local secrets
 firmware/esp32/**/config.h
 
-# Local dependency sandbox
-.codex_deps/
+# Local runtime state
+.plantguardian/
 
 # Python
 __pycache__/
 .pytest_cache/
 .venv/
+.venv*/
 venv/
+*.db
 
 # Node / Expo
 node_modules/
 .expo/
+*.log
+*-qr.png
 dist/
 build/
 

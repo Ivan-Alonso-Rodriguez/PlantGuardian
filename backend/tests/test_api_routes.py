@@ -39,6 +39,18 @@ class ApiRoutesTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    def test_api_allows_browser_cross_origin_requests(self) -> None:
+        response = self.client.options(
+            "/api/dashboard",
+            headers={
+                "Origin": "http://localhost:8081",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["access-control-allow-origin"], "*")
+
     def test_latest_reading_returns_404_before_first_reading(self) -> None:
         response = self.client.get("/api/readings/latest")
 

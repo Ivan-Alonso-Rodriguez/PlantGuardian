@@ -1,6 +1,7 @@
 import asyncio
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.app.api.info import router as info_router
 from backend.app.api.realtime import router as realtime_router
@@ -56,6 +57,12 @@ def create_app(
         title=selected_settings.app_name,
         version=selected_settings.app_version,
         description="Backend API for smart irrigation monitoring and control.",
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     app.state.settings = selected_settings

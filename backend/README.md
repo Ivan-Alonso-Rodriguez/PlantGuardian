@@ -73,24 +73,16 @@ See `.env.example` at the repository root.
 
 From the repository root:
 
-```bash
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r backend/requirements.txt
 ```
-
-For this Codex workspace, dependencies were installed locally into `.codex_deps`.
 
 ## Run Tests
 
 ```bash
 python -m unittest discover backend/tests
-```
-
-Codex workspace command:
-
-```powershell
-$env:PYTHONPATH = (Join-Path (Get-Location) '.codex_deps')
-$env:PYTHONDONTWRITEBYTECODE = '1'
-& "C:\Users\USER\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m unittest discover backend\tests
 ```
 
 ## Run API Locally
@@ -105,13 +97,6 @@ SQLite persistence mode:
 
 ```bash
 PLANTGUARDIAN_USE_DATABASE=true DATABASE_URL=sqlite:///./plantguardian.db uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-Codex workspace command:
-
-```powershell
-$env:PYTHONPATH = (Join-Path (Get-Location) '.codex_deps')
-& "C:\Users\USER\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```
 
 ## Next Backend Step
